@@ -1,0 +1,137 @@
+diff --git a/protocol/connection.go b/protocol/connection.go
+index 03c4bef..4520efe 100644
+--- a/protocol/connection.go
++++ b/protocol/connection.go
+@@ -120,6 +120,8 @@ func (conn *Conn) ReadPacket() (Packet, error) {
+ 		return nil, fmt.Errorf("Invalid packet %02X", id)
+ 	}
+ 
++	fmt.Printf("Packet received 0x%02X\n", id)
++
+ 	val := reflect.New(ty).Elem()
+ 
+ 	fs := fields(ty)
+@@ -242,6 +244,10 @@ type field struct {
+ 	read      decoder
+ }
+ 
++var (
++	PositionType = reflect.TypeOf(Position{})
++)
++
+ //Returns the field or fields needed to fully write the struct's field
+ func compileField(sf reflect.StructField, t reflect.Type, ind []int) []field {
+ 	temp := sf.Index[0]
+@@ -299,6 +305,12 @@ func compileField(sf reflect.StructField, t reflect.Type, ind []int) []field {
+ 		f.condition = condAlways
+ 	}
+ 
++	if sf.Type.AssignableTo(PositionType) {
++		f.write = encodePosition
++		f.read = decodePosition
++		return []field{f}
++	}
++
+ 	switch sf.Type.Kind() {
+ 	case reflect.Bool:
+ 		f.write = encodeBool
+@@ -717,6 +729,33 @@ func decodeString(conn *Conn, field reflect.Value) error {
+ 	return err
+ }
+ 
++func encodePosition(conn *Conn, field reflect.Value) {
++	pos, ok := field.Interface().(Position)
++	if !ok {
++		panic("not a position field")
++	}
++	val := ((uint64(pos.X) & 0x3FFFFFF) << 38) | ((uint64(pos.Y) & 0xFFF) << 26) | (uint64(pos.Z) & 0x3FFFFFF)
++	bs := conn.b[:8]
++	binary.BigEndian.PutUint64(bs, val)
++	conn.Out.Write(bs)
++}
++
++func decodePosition(conn *Conn, field reflect.Value) error {
++	bs := conn.b[:8]
++	_, err := io.ReadFull(conn.In, bs)
++	if err != nil {
++		return err
++	}
++	val := binary.BigEndian.Uint64(bs)
++	pos := Position{
++		X: int32(val >> 38),
++		Y: int32((val >> 26) & 0xFFF),
++		Z: int32(val << 38 >> 38),
++	}
++	field.Set(reflect.ValueOf(pos))
++	return nil
++}
++
+ func encodeBool(conn *Conn, field reflect.Value) {
+ 	bs := conn.b[:1]
+ 	if field.Bool() {
+diff --git a/protocol/loginp.go b/protocol/loginp.go
+index 1342d78..272ecac 100644
+--- a/protocol/loginp.go
++++ b/protocol/loginp.go
+@@ -22,8 +22,8 @@ type LoginDisconnect struct {
+ 
+ type EncryptionKeyRequest struct {
+ 	ServerID    string
+-	PublicKey   []byte `ltype:"int16"`
+-	VerifyToken []byte `ltype:"int16"`
++	PublicKey   []byte `ltype:"varint"`
++	VerifyToken []byte `ltype:"varint"`
+ }
+ 
+ type LoginSuccess struct {
+@@ -36,6 +36,6 @@ type LoginStart struct {
+ }
+ 
+ type EncryptionKeyResponse struct {
+-	SharedSecret []byte `ltype:"int16"`
+-	VerifyToken  []byte `ltype:"int16"`
++	SharedSecret []byte `ltype:"varint"`
++	VerifyToken  []byte `ltype:"varint"`
+ }
+diff --git a/protocol/packets_server.go b/protocol/packets_server.go
+index 4ef184e..5484fe5 100644
+--- a/protocol/packets_server.go
++++ b/protocol/packets_server.go
+@@ -33,12 +33,13 @@ type KeepAlive struct {
+ }
+ 
+ type JoinGame struct {
+-	EntityID   int32
+-	Gamemode   byte
+-	Dimension  int8
+-	Difficulty byte
+-	MaxPlayers byte
+-	LevelType  string
++	EntityID     int32
++	Gamemode     byte
++	Dimension    int8
++	Difficulty   byte
++	MaxPlayers   byte
++	LevelType    string
++	ReducedDebug bool
+ }
+ 
+ type ServerMessage struct {
+@@ -56,12 +57,16 @@ type EntityEquipment struct {
+ 	Item     Slot
+ }
+ 
+-type SpawnPosition struct {
++type Position struct {
+ 	X int32
+ 	Y int32
+ 	Z int32
+ }
+ 
++type SpawnPosition struct {
++	Position
++}
++
+ type UpdateHealth struct {
+ 	Health         float32
+ 	Food           int16
