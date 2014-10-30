@@ -85,10 +85,11 @@ var ( // ast parts
 		Op: token.NEQ,
 		Y:  i_nil,
 	}
+	e_retErr = &ast.ReturnStmt{
+		Results: []ast.Expr{i_err},
+	}
 	e_body = &ast.BlockStmt{
-		List: []ast.Stmt{&ast.ReturnStmt{
-			Results: []ast.Expr{i_err},
-		}},
+		List: []ast.Stmt{e_retErr},
 	}
 	e_fntype = &ast.FuncType{
 		Params:  createFieldList("c", "*Conn", "version", "McVersion"),
@@ -113,6 +114,7 @@ func createReadMethod(name *ast.Ident, st *ast.StructType) *ast.FuncDecl {
 			body.List = append(body.List, st)
 		}
 	}
+	body.List = append(body.List, e_retErr)
 	return fd
 }
 
@@ -157,6 +159,7 @@ func createWriteMethod(name *ast.Ident, st *ast.StructType) *ast.FuncDecl {
 			body.List = append(body.List, st)
 		}
 	}
+	body.List = append(body.List, e_retErr)
 	return fd
 }
 
