@@ -30,6 +30,12 @@ And the more complete implementation [mc-server/MCServer][mcserver] (support 1.8
  * manually implement every packet's reading/writing
  * is in C++
 
+## server.go
+
+allow to login from an 1.8 client with some patch to [netherrack][netherrack] and then login to an other server
+should add packets proxying to catch broken packet parsing and record session for automated tests
+mostly experiments residues
+
 ## Food for thought
 
 * http://wiki.vg/
