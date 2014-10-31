@@ -9,10 +9,6 @@ import (
 	"os"
 )
 
-const (
-	packageName = "protocol"
-)
-
 func main() {
 
 	fset := token.NewFileSet()
@@ -52,10 +48,10 @@ func main() {
 			return false
 		}
 		if st, ok := spec.Type.(*ast.StructType); ok {
-			fd := createWriteMethod(spec.Name, st)
+			fd := createMethod(spec.Name, i_write, st)
 			decls = append(decls, fd)
 
-			fd = createReadMethod(spec.Name, st)
+			fd = createMethod(spec.Name, i_read, st)
 			decls = append(decls, fd)
 		}
 		return false
@@ -97,20 +93,20 @@ var ( // ast parts
 	}
 )
 
-func createReadMethod(name *ast.Ident, st *ast.StructType) *ast.FuncDecl {
+func createMethod(name, method *ast.Ident, st *ast.StructType) *ast.FuncDecl {
 	body := &ast.BlockStmt{
 		List: make([]ast.Stmt, 0),
 	}
 	fd := &ast.FuncDecl{
 		Doc:  nil,
 		Recv: createFieldList("pkt", "*"+name.Name),
-		Name: i_read,
+		Name: method,
 		Type: e_fntype,
 		Body: body,
 	}
 	for _, field := range st.Fields.List {
 		for _, name := range field.Names {
-			st := createReadFieldStatement(name, field.Type, field.Tag)
+			st := createFieldStatement(name, method, field.Type, field.Tag)
 			body.List = append(body.List, st)
 		}
 	}
@@ -118,53 +114,7 @@ func createReadMethod(name *ast.Ident, st *ast.StructType) *ast.FuncDecl {
 	return fd
 }
 
-func createReadFieldStatement(fieldName *ast.Ident, fType ast.Expr, tag *ast.BasicLit) ast.Stmt {
-	typeName, ok := fType.(*ast.Ident)
-	if !ok {
-		panic(fmt.Errorf("Field type of ?.%s should be an identifier. Got %T", fieldName.Name, fType))
-	}
-	cond := &ast.IfStmt{
-		Init: &ast.AssignStmt{
-			Lhs: []ast.Expr{&ast.SelectorExpr{
-				X:   i_pkt,
-				Sel: ast.NewIdent(fieldName.Name),
-			}, i_err},
-			Tok: token.ASSIGN,
-			Rhs: []ast.Expr{&ast.CallExpr{
-				Fun:  ast.NewIdent("Read" + typeName.Name),
-				Args: []ast.Expr{i_cvar, i_vers},
-			}},
-		},
-		Cond: e_cond,
-		Body: e_body,
-	}
-
-	return cond
-}
-
-func createWriteMethod(name *ast.Ident, st *ast.StructType) *ast.FuncDecl {
-	body := &ast.BlockStmt{
-		List: make([]ast.Stmt, 0),
-	}
-	fd := &ast.FuncDecl{
-		Doc:  nil,
-		Recv: createFieldList("pkt", "*"+name.Name),
-		Name: i_write,
-		Type: e_fntype,
-		Body: body,
-	}
-	for _, field := range st.Fields.List {
-		for _, name := range field.Names {
-			st := createWriteFieldStatement(name, field.Type, field.Tag)
-			body.List = append(body.List, st)
-		}
-	}
-	body.List = append(body.List, e_retErr)
-	return fd
-}
-
-func createWriteFieldStatement(fieldName *ast.Ident, fType ast.Expr, tag *ast.BasicLit) ast.Stmt {
-
+func createFieldStatement(fieldName, method *ast.Ident, fType ast.Expr, tag *ast.BasicLit) ast.Stmt {
 	cond := &ast.IfStmt{
 		Init: &ast.AssignStmt{
 			Lhs: []ast.Expr{i_err},
@@ -175,7 +125,7 @@ func createWriteFieldStatement(fieldName *ast.Ident, fType ast.Expr, tag *ast.Ba
 						X:   i_pkt,
 						Sel: ast.NewIdent(fieldName.Name),
 					},
-					Sel: i_write,
+					Sel: method,
 				},
 				Args: []ast.Expr{i_cvar, i_vers},
 			}},
