@@ -16,6 +16,28 @@
 
 package protocol
 
+type Handshake struct {
+	ProtocolVersion varint
+	Address         string
+	Port            uint16
+	State           varint
+}
+
+type StatusResponse struct {
+	Data string
+}
+
+type StatusPing struct {
+	Time int64
+}
+
+type StatusGet struct {
+}
+
+type ClientStatusPing struct {
+	Time int64
+}
+
 type ClientKeepAlive struct {
 	KeepAliveID int32
 }
@@ -30,7 +52,7 @@ type UseEntity struct {
 }
 
 type ClientPlayer struct {
-	OnGround Bool
+	OnGround bool
 }
 
 type ClientPlayerPosition struct {
@@ -38,13 +60,13 @@ type ClientPlayerPosition struct {
 	Y        float64
 	Stance   float64
 	Z        float64
-	OnGround Bool
+	OnGround bool
 }
 
 type ClientPlayerLook struct {
 	Yaw      float32
 	Pitch    float32
-	OnGround Bool
+	OnGround bool
 }
 
 type ClientPlayerPositionLook struct {
@@ -54,7 +76,7 @@ type ClientPlayerPositionLook struct {
 	Z        float64
 	Yaw      float32
 	Pitch    float32
-	OnGround Bool
+	OnGround bool
 }
 
 type PlayerDigging struct {
@@ -94,8 +116,8 @@ type EntityAction struct {
 type SteerVehicle struct {
 	Sideways float32
 	Forward  float32
-	Jump     Bool
-	Unmount  Bool
+	Jump     bool
+	Unmount  bool
 }
 
 type ClientWindowClose struct {
@@ -114,7 +136,7 @@ type WindowClick struct {
 type ClientWindowTransactionConfirm struct {
 	WindowID     int8
 	ActionNumber int16
-	Accepted     Bool
+	Accepted     bool
 }
 
 type CreativeInventoryAction struct {
@@ -152,7 +174,7 @@ type ClientSettings struct {
 	ViewDistance int8
 	ChatFlags    byte
 	Difficulty   int8
-	ShowCape     Bool
+	ShowCape     bool
 }
 
 type ClientStatuses struct {
@@ -183,7 +205,7 @@ type JoinGame struct {
 	Difficulty   byte
 	MaxPlayers   byte
 	LevelType    string
-	ReducedDebug Bool
+	ReducedDebug bool
 }
 
 type ServerMessage struct {
@@ -224,7 +246,7 @@ type PlayerPositionLook struct {
 	Z        float64
 	Yaw      float32
 	Pitch    float32
-	OnGround Bool
+	OnGround bool
 }
 
 type HeldItemChange struct {
@@ -239,12 +261,12 @@ type UseBed struct {
 }
 
 type Animation struct {
-	EntityID  VarInt
+	EntityID  varint
 	Animation byte
 }
 
 type SpawnPlayer struct {
-	EntityID    VarInt
+	EntityID    varint
 	PlayerUUID  string
 	PlayerName  string
 	X           int32
@@ -262,7 +284,7 @@ type CollectItem struct {
 }
 
 type SpawnObject struct {
-	EntityID  VarInt
+	EntityID  varint
 	Type      int8
 	X         int32
 	Y         int32
@@ -276,7 +298,7 @@ type SpawnObject struct {
 }
 
 type SpawnMob struct {
-	EntityID  VarInt
+	EntityID  varint
 	Type      byte
 	X         int32
 	Y         int32
@@ -291,7 +313,7 @@ type SpawnMob struct {
 }
 
 type SpawnPainting struct {
-	EntityID  VarInt
+	EntityID  varint
 	Title     string
 	X         int32
 	Y         int32
@@ -300,7 +322,7 @@ type SpawnPainting struct {
 }
 
 type SpawnExperienceOrb struct {
-	EntityID VarInt
+	EntityID varint
 	X        int32
 	Y        int32
 	Z        int32
@@ -315,7 +337,7 @@ type EntityVelocity struct {
 }
 
 type EntityDestroy struct {
-	EntityIDs EIDs `ltype:"int8"`
+	EntityIDs []int32 `ltype:"int8"`
 }
 
 type Entity struct {
@@ -366,7 +388,7 @@ type EntityStatus struct {
 type EntityAttach struct {
 	EntityID  int32
 	VehicleID int32
-	Leash     Bool
+	Leash     bool
 }
 
 type EntityMetadata struct {
@@ -394,14 +416,14 @@ type SetExperience struct {
 
 type EntityProperties struct {
 	EntityID   int32
-	Properties Properties `ltype:"int32"`
+	Properties []Property `ltype:"int32"`
 }
 
 //Part of Entity Properties
 type Property struct {
 	Key       string
 	Value     float64
-	Modifiers Modifiers `ltype:"int16"`
+	Modifiers []Modifier `ltype:"int16"`
 }
 
 //Part of Entity Properties
@@ -415,7 +437,7 @@ type Modifier struct {
 type ChunkData struct {
 	X              int32
 	Z              int32
-	GroundUp       Bool
+	GroundUp       bool
 	PrimaryBitMap  uint16
 	AddBitMap      uint16
 	CompressedData Buffer `ltype:"int32"`
@@ -432,7 +454,7 @@ type BlockChange struct {
 	X    int32
 	Y    byte
 	Z    int32
-	Type VarInt
+	Type varint
 	Data byte
 }
 
@@ -440,12 +462,12 @@ type BlockAction struct {
 	X            int32
 	Y            int16
 	Z            int32
-	Byte1, Byte2 byte
-	BlockID      VarInt
+	Byte1, byte2 byte
+	BlockID      varint
 }
 
 type BlockBreakAnimation struct {
-	EntityID     VarInt
+	EntityID     varint
 	X            int32
 	Y            int32
 	Z            int32
@@ -456,8 +478,8 @@ type MapChunkBulk struct {
 	ChunkCount int16
 	DataLength int32
 	SkyLight   byte
-	Data       Buffer     `ltype:"nil"`
-	Meta       ChunkMetas `ltype:"nil"`
+	Data       Buffer      `ltype:"nil"`
+	Meta       []ChunkMeta `ltype:"nil"`
 }
 
 //Part of MapChunkBulk
@@ -472,7 +494,7 @@ type Explosion struct {
 	Y       float32
 	Z       float32
 	Radius  float32
-	Records Records `ltype:"int32"`
+	Records []Record `ltype:"int32"`
 	MotionX float32
 	MotionY float32
 	MotionZ float32
@@ -491,7 +513,7 @@ type Effect struct {
 	Y               byte
 	Z               int32
 	Data            int32
-	DisableRelative Bool
+	DisableRelative bool
 }
 
 type SoundEffect struct {
@@ -521,7 +543,7 @@ type GameState struct {
 }
 
 type SpawnGlobalEntity struct {
-	EntityID VarInt
+	EntityID varint
 	Type     int8
 	X        int32
 	Y        int32
@@ -533,7 +555,7 @@ type WindowOpen struct {
 	Type     byte
 	Title    string
 	Slots    byte
-	UseTitle Bool
+	UseTitle bool
 	EntityID int32 `if:"Type,==,11"`
 }
 
@@ -549,7 +571,7 @@ type WindowSetSlot struct {
 
 type WindowItems struct {
 	WindowID byte
-	Slots    Slots `ltype:"int16"`
+	Slots    []Slot `ltype:"int16"`
 }
 
 type WindowUpdateProperty struct {
@@ -561,7 +583,7 @@ type WindowUpdateProperty struct {
 type WindowTransactionConfirm struct {
 	WindowID     byte
 	ActionNumber int16
-	Accepted     Bool
+	Accepted     bool
 }
 
 type UpdateSign struct {
@@ -575,7 +597,7 @@ type UpdateSign struct {
 }
 
 type Maps struct {
-	ItemData VarInt
+	ItemData varint
 	Data     Buffer `ltype:"int16"`
 }
 
@@ -594,17 +616,17 @@ type SignEditorOpen struct {
 }
 
 type Statistics struct {
-	Statistics Statistics `ltype:"varint"`
+	Statistics []Statistic `ltype:"varint"`
 }
 
 type Statistic struct {
 	Name   string
-	Amount VarInt
+	Amount varint
 }
 
 type PlayerListItem struct {
 	PlayerName string
-	Online     Bool
+	Online     bool
 	Ping       int16
 }
 
@@ -615,7 +637,7 @@ type PlayerAbilities struct {
 }
 
 type TabComplete struct {
-	Completions Strings `ltype:"varint"`
+	Completions []string `ltype:"varint"`
 }
 
 type ScoreboardObjective struct {
@@ -639,11 +661,11 @@ type DisplayScoreboard struct {
 type Teams struct {
 	Name        string
 	Mode        byte
-	DisplayName string  `if:"Mode,==,0|2"`
-	Prefix      string  `if:"Mode,==,0|2"`
-	Suffix      string  `if:"Mode,==,0|2"`
-	Flags       byte    `if:"Mode,==,0|2"`
-	Players     Strings `if:"Mode,==,0|3|4" ltype:"int16"`
+	DisplayName string   `if:"Mode,==,0|2"`
+	Prefix      string   `if:"Mode,==,0|2"`
+	Suffix      string   `if:"Mode,==,0|2"`
+	Flags       byte     `if:"Mode,==,0|2"`
+	Players     []string `if:"Mode,==,0|3|4" ltype:"int16"`
 }
 
 type PluginMessage struct {
@@ -653,4 +675,28 @@ type PluginMessage struct {
 
 type Disconnect struct {
 	Reason string
+}
+
+type LoginDisconnect struct {
+	Data string
+}
+
+type EncryptionKeyRequest struct {
+	ServerID    string
+	PublicKey   Buffer `ltype:"varint"`
+	VerifyToken Buffer `ltype:"varint"`
+}
+
+type LoginSuccess struct {
+	UUID     string
+	Username string
+}
+
+type LoginStart struct {
+	Username string
+}
+
+type EncryptionKeyResponse struct {
+	SharedSecret Buffer `ltype:"varint"`
+	VerifyToken  Buffer `ltype:"varint"`
 }
