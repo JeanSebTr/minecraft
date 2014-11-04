@@ -23,7 +23,7 @@ Make huge use of golang type alias so every packet's field type has a Read/Write
 The rational behind it is that the original implementation :
  * can't support multiple protocol versions at once
  * make heavy use of reflexion to read/write packets
- * did a clever use of struct's tag for buffer's and array's length, but I think it's better solved by type alias
+ * did a clever use of struct's tag for buffer's and array's length ~~, but I think it's better solved by type alias **which give us ptr deferencing hell**~~ and I find it great to reuse those tags at compile time
 
 And the more complete implementation [mc-server/MCServer][mcserver] (support 1.8)
  * duplicate the parser methods to handle changes in protocol
