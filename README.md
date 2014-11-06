@@ -9,11 +9,6 @@ The MasterPlan would be to make a server supporting multiple client's versions o
 Storing terrain chunks in redis or something like that.
 Or sharding the generated chunks between running instances with custom pubsub ans raft. Because. Fun.
 
-## build/build.go
-
-Generate protocol read/write methods from packet's struct definitions using golang AST
-
-run `go run build/build.go < protocol/packets.go > protocol/somefile.go`
 
 ## protocol/
 
@@ -29,6 +24,12 @@ And the more complete implementation [mc-server/MCServer][mcserver] (support 1.8
  * duplicate the parser methods to handle changes in protocol
  * manually implement every packet's reading/writing
  * is in C++
+
+## protocol/generate/
+
+Generate protocol read/write methods from packet's struct definitions using golang AST
+
+run `go run protocol/generate/* < protocol/packets.go > protocol/generated.go`
 
 ## server.go
 

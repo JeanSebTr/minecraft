@@ -8,112 +8,66 @@ import (
 	"go/token"
 	"os"
 	"reflect"
-	"strconv"
 )
 
-type tMode int
+type tMode uint8
 
 const (
 	READ tMode = iota
 	WRITE
 )
 
-type parse func(ast.Expr, tMode) ast.Stmt
-
-type spec interface {
-	parse(ast.Expr, tMode) ast.Stmt
-}
-
-type extSpec struct {
-	encode, decode *ast.Ident
-}
-
-func ext(encode, decode string) *extSpec {
-	return &extSpec{ast.NewIdent(encode), ast.NewIdent(decode)}
-}
-
-type intSpec struct {
-	size   int
-	signed bool
-	impl   *extSpec
-}
-
-func i(l int) *intSpec {
-	return &intSpec{l, true, nil}
-}
-
-func ui(l int) *intSpec {
-	return &intSpec{l, false, nil}
-}
-
-var types = map[string]spec{
-	"bool":     ext("encodeBool", "decodeBool"),
-	"byte":     ext("encodeByte", "decodeByte"),
-	"uint8":    ui(1),
-	"int8":     i(1),
-	"uint16":   ui(2),
-	"int16":    i(2),
-	"uint32":   ui(4),
-	"int32":    i(4),
-	"uint64":   ui(8),
-	"int64":    i(8),
-	"varint":   nil, //t(parseVarInt, 4, true),
-	"varLong":  nil, //t(parseVarInt, 8, true),
-	"float32":  nil, //t(parseFloat, 4, true),
-	"float64":  nil, //t(parseFloat, 8, true),
-	"string":   ext("encodeString", "decodeString"),
-	"Buffer":   ext("encodeBuffer", "decodeBuffer"),
-	"Position": ext("encodePosition", "decodePosition"),
-	"MetaData": ext("encodeMetaData", "decodeMetaData"),
-}
-
-var decls []ast.Decl
-
 func main() {
+	// required, but not useful
 	fset := token.NewFileSet()
 
+	// parse source from Stdin
 	src, err := parser.ParseFile(fset, "packets.go", os.Stdin, parser.AllErrors)
 	if err != nil {
 		panic(err)
-	}
-
-	decls = make([]ast.Decl, 0)
-
-	f := ast.File{
-		Doc:        nil,
-		Name:       src.Name,
-		Decls:      nil, // top-level declarations; or nil
-		Scope:      nil, //   *Scope          // package scope (this file only)
-		Imports:    nil, //   []*ImportSpec   // imports in this file
-		Unresolved: nil, //[]*Ident        // unresolved identifiers in this file
-		Comments:   nil, //[]*CommentGroup // list of all comments in the source file
 	}
 
 	// scan all types
 	ast.Inspect(src, func(n ast.Node) (cont bool) {
 		sp, st, cont := scanTypes(n)
 		if sp != nil && st != nil {
-			types[sp.Name.Name] = nil
+			types[sp.Name.Name] = nil // just so we know this type exists
 		}
 		return cont
 	})
 
-	// generate r/w methods
+	// will store every generated methods
+	declarations := make([]ast.Decl, 0)
+
+	// generate r/w methods for paquet types
 	ast.Inspect(src, func(n ast.Node) (cont bool) {
 		sp, st, cont := scanTypes(n)
 		if sp != nil && st != nil {
-			fd := createMethod(sp.Name, READ, st)
-			decls = append(decls, fd)
+			readMethod := createMethod(sp.Name, READ, st)
+			declarations = append(declarations, readMethod)
 
-			fd = createMethod(sp.Name, WRITE, st)
-			decls = append(decls, fd)
+			writeMethod := createMethod(sp.Name, WRITE, st)
+			declarations = append(declarations, writeMethod)
 		}
 		return cont
 	})
 
-	f.Decls = decls
+	// generate r/w methods for existing types
+	for _, typeSpec := range types {
+		if typeSpec != nil {
+			for _, declaration := range typeSpec.generate() {
+				declarations = append(declarations, declaration)
+			}
+		}
+	}
 
-	err = printer.Fprint(os.Stdout, fset, &f)
+	// create a new File to store the AST
+	dst := &ast.File{
+		Name:  src.Name,
+		Decls: declarations,
+	}
+
+	err = printer.Fprint(os.Stdout, fset, dst)
 	if err != nil {
 		panic(err)
 	}
@@ -248,60 +202,6 @@ func createArrayStatement(prev []ast.Stmt, expr ast.Expr, sp spec, dir tMode, ta
 	}
 	fmt.Fprintf(os.Stderr, "[] %T, %+v %+v %s:%s\n", expr, expr, sp, tag, tag.Get("ltype"))
 	return prev
-}
-
-func (sp *extSpec) parse(expr ast.Expr, dir tMode) ast.Stmt {
-	call := &ast.CallExpr{}
-	assign := &ast.AssignStmt{
-		Tok: token.ASSIGN,
-		Rhs: []ast.Expr{call},
-	}
-	cond := &ast.IfStmt{
-		Init: assign,
-		Cond: e_cond,
-		Body: e_body,
-	}
-	if dir == READ {
-		assign.Lhs = []ast.Expr{expr, i_err}
-		call.Fun = sp.decode
-		call.Args = []ast.Expr{i_cvar, i_vers}
-	} else {
-		assign.Lhs = []ast.Expr{i_err}
-		call.Fun = sp.encode
-		call.Args = []ast.Expr{expr, i_cvar, i_vers}
-	}
-	return cond
-}
-
-func (sp *intSpec) parse(expr ast.Expr, dir tMode) ast.Stmt {
-	if sp.impl == nil {
-		strLen := strconv.Itoa(sp.size * 8)
-		if sp.signed {
-			sp.impl = &extSpec{
-				ast.NewIdent("encodeInt" + strLen),
-				ast.NewIdent("decodeInt" + strLen),
-			}
-		} else {
-			sp.impl = &extSpec{
-				ast.NewIdent("encodeUint" + strLen),
-				ast.NewIdent("decodeUint" + strLen),
-			}
-		}
-		fmt.Fprintf(os.Stderr, "TODO impl int u:%v %s\n", sp.signed, strLen)
-		// sp.encode
-		// enc := ast.FuncDecl{
-		// 	Name: method,
-		// 	Type: e_fntype,
-		// 	Body: body,
-		// }
-		// enc.Type.Results
-		// func encodeUint16(conn *Conn, field reflect.Value) {
-		// 	bs := conn.b[:2]
-		// 	binary.BigEndian.PutUint16(bs, uint16(field.Uint()))
-		// 	conn.Out.Write(bs)
-		// }
-	}
-	return sp.impl.parse(expr, dir)
 }
 
 func createFieldList(names ...string) *ast.FieldList {
