@@ -39,6 +39,28 @@ func main() {
 	// will store every generated methods
 	declarations := make([]ast.Decl, 0)
 
+	// imports
+	declarations = append(declarations, &ast.GenDecl{
+		Tok:    token.IMPORT,
+		Lparen: 1,
+		Specs: []ast.Spec{
+			// binary
+			&ast.ImportSpec{
+				Path: &ast.BasicLit{
+					Kind:  token.STRING,
+					Value: `"encoding/binary"`,
+				},
+			},
+			// io
+			&ast.ImportSpec{
+				Path: &ast.BasicLit{
+					Kind:  token.STRING,
+					Value: `"io"`,
+				},
+			},
+		},
+	})
+
 	// generate r/w methods for paquet types
 	ast.Inspect(src, func(n ast.Node) (cont bool) {
 		sp, st, cont := scanTypes(n)
@@ -97,48 +119,20 @@ func scanTypes(n ast.Node) (*ast.TypeSpec, *ast.StructType, bool) {
 	return spec, st, false
 }
 
-var ( // variables
-	i_cvar  = ast.NewIdent("c")
-	i_pkt   = ast.NewIdent("pkt")
-	i_err   = ast.NewIdent("err")
-	i_nil   = ast.NewIdent("nil")
-	i_read  = ast.NewIdent("Read")
-	i_write = ast.NewIdent("Write")
-	i_vers  = ast.NewIdent("version")
-)
-
-var ( // ast parts
-	e_cond = &ast.BinaryExpr{
-		X:  i_err,
-		Op: token.NEQ,
-		Y:  i_nil,
-	}
-	e_retErr = &ast.ReturnStmt{
-		Results: []ast.Expr{i_err},
-	}
-	e_body = &ast.BlockStmt{
-		List: []ast.Stmt{e_retErr},
-	}
-	e_fntype = &ast.FuncType{
-		Params:  createFieldList("c", "*Conn", "version", "McVersion"),
-		Results: createFieldList("err", "error"),
-	}
-)
-
 func createMethod(name *ast.Ident, dir tMode, st *ast.StructType) *ast.FuncDecl {
 	body := &ast.BlockStmt{
 		List: make([]ast.Stmt, 0),
 	}
 	var method *ast.Ident
 	if dir == READ {
-		method = i_read
+		method = ident_Read
 	} else {
-		method = i_write
+		method = ident_Write
 	}
 	fd := &ast.FuncDecl{
 		Recv: createFieldList("pkt", "*"+name.Name),
 		Name: method,
-		Type: e_fntype,
+		Type: fType_pktMethod,
 		Body: body,
 	}
 	for _, field := range st.Fields.List {
@@ -155,7 +149,7 @@ func createMethod(name *ast.Ident, dir tMode, st *ast.StructType) *ast.FuncDecl 
 			panic(fmt.Errorf("Not *ast.Ident or *ast.ArrayType! %T %+v", field.Type, field.Type))
 		}
 	}
-	body.List = append(body.List, e_retErr)
+	body.List = append(body.List, stmt_return)
 	return fd
 }
 
@@ -172,7 +166,7 @@ func createFieldsStatements(prev []ast.Stmt, tName string, field *ast.Field, dir
 	}
 	for _, name := range field.Names {
 		prev = factory(prev, &ast.SelectorExpr{
-			X:   i_pkt,
+			X:   ident_pkt,
 			Sel: ast.NewIdent(name.Name),
 		}, sp, dir, tag)
 	}

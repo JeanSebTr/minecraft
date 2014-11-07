@@ -41,17 +41,17 @@ func (sp *extSpec) parse(expr ast.Expr, dir tMode) ast.Stmt {
 	}
 	cond := &ast.IfStmt{
 		Init: assign,
-		Cond: e_cond,
-		Body: e_body,
+		Cond: expr_errNotNil,
+		Body: stmt_blockReturn,
 	}
 	if dir == READ {
-		assign.Lhs = []ast.Expr{expr, i_err}
+		assign.Lhs = []ast.Expr{expr, ident_err}
 		call.Fun = sp.decode
-		call.Args = []ast.Expr{i_cvar, i_vers}
+		call.Args = []ast.Expr{ident_c, ident_v}
 	} else {
-		assign.Lhs = []ast.Expr{i_err}
+		assign.Lhs = []ast.Expr{ident_err}
 		call.Fun = sp.encode
-		call.Args = []ast.Expr{expr, i_cvar, i_vers}
+		call.Args = []ast.Expr{expr, ident_c, ident_v}
 	}
 	return cond
 }
@@ -94,19 +94,31 @@ func (sp *intSpec) init() *intSpec {
 // }
 
 func (sp *intSpec) generate() []ast.Decl {
-	var iType *ast.Ident
 	strLen := strconv.Itoa(sp.size * 8)
+	iType := ast.NewIdent("int" + strLen)
+	iCast := ast.NewIdent("uint" + strLen)
+	iMethod := "Uint" + strLen
 
-	if sp.signed {
-		iType = ast.NewIdent("int" + strLen)
-	} else {
-		iType = ast.NewIdent("uint" + strLen)
+	if !sp.signed {
+		iType, iCast = iCast, iType
 	}
 	// encode
 	encodeMethod := createFuncDecl(sp.encode, iType, ident_i, WRITE)
 	encodeMethod.Body.List = []ast.Stmt{
-		createBufferInit(sp.size, WRITE), // buf := c.wb[:size]
-		// putint // binary.BigEndian.PutUint16(bs, uint16(i))
+		createBufferInit(sp.size, WRITE),
+		// binary.BigEndian.PutUint16(buf, uint16(i))
+		&ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X:   sel_bigEndian,
+					Sel: ast.NewIdent("Put" + iMethod),
+				},
+				Args: []ast.Expr{
+					ident_buf,
+					cast(iCast, ident_i, sp.signed),
+				},
+			},
+		},
 		stmt_writeBuf,
 		stmt_return,
 	}
@@ -115,8 +127,22 @@ func (sp *intSpec) generate() []ast.Decl {
 	decodeMethod := createFuncDecl(sp.decode, iType, ident_i, READ)
 	decodeMethod.Body.List = []ast.Stmt{
 		createBufferInit(sp.size, READ),
-		stmt_readFull, // _, err = io.ReadFull(c.In, buf)
-		// put // i = Uint16(binary.BigEndian.Uint16(bs))
+		stmt_readFull,
+		stmt_retOnErr,
+		// i = Uint16(binary.BigEndian.Uint16(bs))
+		&ast.AssignStmt{
+			Lhs: exprL_ident_i,
+			Tok: token.ASSIGN,
+			Rhs: []ast.Expr{
+				cast(iType, &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   sel_bigEndian,
+						Sel: ast.NewIdent(iMethod),
+					},
+					Args: exprL_ident_buf,
+				}, sp.signed),
+			},
+		},
 		stmt_return,
 	}
 	return []ast.Decl{encodeMethod, decodeMethod}
@@ -162,7 +188,7 @@ func createBufferInit(length int, dir tMode) ast.Stmt {
 	}
 	// bs := c.rb[:2]
 	assign := &ast.AssignStmt{
-		Lhs: []ast.Expr{ident_buf},
+		Lhs: exprL_ident_buf,
 		Tok: token.DEFINE,
 		Rhs: []ast.Expr{&ast.SliceExpr{
 			X:   sel,
@@ -174,4 +200,15 @@ func createBufferInit(length int, dir tMode) ast.Stmt {
 		}},
 	}
 	return assign
+}
+
+func cast(typeIdent, varIdent ast.Expr, shouldCast ...bool) ast.Expr {
+	if len(shouldCast) > 0 && shouldCast[0] {
+		return &ast.CallExpr{
+			Fun:  typeIdent,
+			Args: []ast.Expr{varIdent},
+		}
+	} else {
+		return varIdent
+	}
 }

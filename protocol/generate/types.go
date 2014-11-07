@@ -2,9 +2,9 @@ package main
 
 var types = map[string]spec{
 	"bool":     ext("encodeBool", "decodeBool"),
-	"byte":     ext("encodeByte", "decodeByte"),
-	"uint8":    ui(1),
-	"int8":     i(1),
+	"byte":     nil, //ext("encodeByte", "decodeByte"),
+	"uint8":    nil, //ui(1),
+	"int8":     nil, //i(1),
 	"uint16":   ui(2),
 	"int16":    i(2),
 	"uint32":   ui(4),
@@ -15,8 +15,8 @@ var types = map[string]spec{
 	"varLong":  nil, //t(parseVarInt, 8, true),
 	"float32":  nil, //t(parseFloat, 4, true),
 	"float64":  nil, //t(parseFloat, 8, true),
-	"string":   ext("encodeString", "decodeString"),
-	"Buffer":   ext("encodeBuffer", "decodeBuffer"),
-	"Position": ext("encodePosition", "decodePosition"),
-	"MetaData": ext("encodeMetaData", "decodeMetaData"),
+	"string":   nil, //ext("encodeString", "decodeString"),
+	"Buffer":   nil, //ext("encodeBuffer", "decodeBuffer"),
+	"Position": nil, //ext("encodePosition", "decodePosition"),
+	"MetaData": nil, //ext("encodeMetaData", "decodeMetaData"),
 }
