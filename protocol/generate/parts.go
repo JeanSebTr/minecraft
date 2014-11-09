@@ -73,6 +73,8 @@ var (
 	}
 	exprL_ident_i     = []ast.Expr{ident_i}
 	exprL_ident_buf   = []ast.Expr{ident_buf}
+	exprL_ident_err   = []ast.Expr{ident_err}
+	exprL_connAndVer  = []ast.Expr{ident_c, ident_v}
 	exprL_blankAndErr = []ast.Expr{ident_, ident_err}
 )
 

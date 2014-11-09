@@ -15,6 +15,10 @@ type extSpec struct {
 	encode, decode *ast.Ident
 }
 
+type locSpec struct {
+	//
+}
+
 func ext(encode, decode string) *extSpec {
 	return &extSpec{ast.NewIdent(encode), ast.NewIdent(decode)}
 }
@@ -33,6 +37,35 @@ func ui(l int) *intSpec {
 	return (&intSpec{l, false, nil}).init()
 }
 
+func (sp *locSpec) parse(expr ast.Expr, dir tMode) ast.Stmt {
+	sel := &ast.SelectorExpr{
+		X: expr,
+	}
+	if dir == READ {
+		sel.Sel = ident_Read
+	} else {
+		sel.Sel = ident_Write
+	}
+	return &ast.IfStmt{
+		Init: &ast.AssignStmt{
+			Lhs: exprL_ident_err,
+			Tok: token.ASSIGN,
+			Rhs: []ast.Expr{
+				&ast.CallExpr{
+					Fun:  sel,
+					Args: exprL_connAndVer,
+				},
+			},
+		},
+		Cond: expr_errNotNil,
+		Body: stmt_blockReturn,
+	}
+}
+
+func (sp *locSpec) generate() []ast.Decl {
+	return nil // local type!
+}
+
 func (sp *extSpec) parse(expr ast.Expr, dir tMode) ast.Stmt {
 	call := &ast.CallExpr{}
 	assign := &ast.AssignStmt{
@@ -47,9 +80,9 @@ func (sp *extSpec) parse(expr ast.Expr, dir tMode) ast.Stmt {
 	if dir == READ {
 		assign.Lhs = []ast.Expr{expr, ident_err}
 		call.Fun = sp.decode
-		call.Args = []ast.Expr{ident_c, ident_v}
+		call.Args = exprL_connAndVer
 	} else {
-		assign.Lhs = []ast.Expr{ident_err}
+		assign.Lhs = exprL_ident_err
 		call.Fun = sp.encode
 		call.Args = []ast.Expr{expr, ident_c, ident_v}
 	}
@@ -75,23 +108,6 @@ func (sp *intSpec) init() *intSpec {
 	}
 	return sp // just for chaining
 }
-
-// func (i Uint16) Write(c *Conn, v McVersion) (err error) {
-// 	bs := c.wb[:2]
-// 	binary.BigEndian.PutUint16(bs, uint16(i))
-// 	_, err = c.Out.Write(bs)
-// 	return
-// }
-
-// func (i *Uint16) Read(c *Conn, v McVersion) (err error) {
-// 	bs := c.rb[:2]
-// 	_, err = io.ReadFull(c.In, bs)
-// 	if err != nil {
-// 		return
-// 	}
-// 	*i = Uint16(binary.BigEndian.Uint16(bs))
-// 	return
-// }
 
 func (sp *intSpec) generate() []ast.Decl {
 	strLen := strconv.Itoa(sp.size * 8)

@@ -17,10 +17,10 @@ const (
 	WRITE
 )
 
-func main() {
-	// required, but not useful
-	fset := token.NewFileSet()
+// required, but not useful
+var fset = token.NewFileSet()
 
+func main() {
 	// parse source from Stdin
 	src, err := parser.ParseFile(fset, "packets.go", os.Stdin, parser.AllErrors)
 	if err != nil {
@@ -31,7 +31,7 @@ func main() {
 	ast.Inspect(src, func(n ast.Node) (cont bool) {
 		sp, st, cont := scanTypes(n)
 		if sp != nil && st != nil {
-			types[sp.Name.Name] = nil // just so we know this type exists
+			types[sp.Name.Name] = &locSpec{}
 		}
 		return cont
 	})
@@ -145,6 +145,7 @@ func createMethod(name *ast.Ident, dir tMode, st *ast.StructType) *ast.FuncDecl 
 			} else {
 				panic(fmt.Errorf("*ast.ArrayType! %T %+v", tIdent.Elt, tIdent.Elt))
 			}
+			fmt.Fprintf(os.Stderr, "[]%+v @ %v\n", tIdent.Elt, fset.Position(field.Type.Pos()))
 		default:
 			panic(fmt.Errorf("Not *ast.Ident or *ast.ArrayType! %T %+v", field.Type, field.Type))
 		}
@@ -194,7 +195,6 @@ func createArrayStatement(prev []ast.Stmt, expr ast.Expr, sp spec, dir tMode, ta
 		}
 		panic(fmt.Errorf("Unknown ltype:%s of %v", tLenName, expr))
 	}
-	fmt.Fprintf(os.Stderr, "[] %T, %+v %+v %s:%s\n", expr, expr, sp, tag, tag.Get("ltype"))
 	return prev
 }
 
