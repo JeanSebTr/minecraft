@@ -17,10 +17,10 @@
 package protocol
 
 type Handshake struct {
-	ProtocolVersion varint
+	ProtocolVersion VarInt
 	Address         string
 	Port            uint16
-	State           varint
+	State           VarInt
 }
 
 type StatusResponse struct {
@@ -261,12 +261,12 @@ type UseBed struct {
 }
 
 type Animation struct {
-	EntityID  varint
+	EntityID  VarInt
 	Animation byte
 }
 
 type SpawnPlayer struct {
-	EntityID    varint
+	EntityID    VarInt
 	PlayerUUID  string
 	PlayerName  string
 	X           int32
@@ -284,7 +284,7 @@ type CollectItem struct {
 }
 
 type SpawnObject struct {
-	EntityID  varint
+	EntityID  VarInt
 	Type      int8
 	X         int32
 	Y         int32
@@ -298,7 +298,7 @@ type SpawnObject struct {
 }
 
 type SpawnMob struct {
-	EntityID  varint
+	EntityID  VarInt
 	Type      byte
 	X         int32
 	Y         int32
@@ -313,7 +313,7 @@ type SpawnMob struct {
 }
 
 type SpawnPainting struct {
-	EntityID  varint
+	EntityID  VarInt
 	Title     string
 	X         int32
 	Y         int32
@@ -322,7 +322,7 @@ type SpawnPainting struct {
 }
 
 type SpawnExperienceOrb struct {
-	EntityID varint
+	EntityID VarInt
 	X        int32
 	Y        int32
 	Z        int32
@@ -454,7 +454,7 @@ type BlockChange struct {
 	X    int32
 	Y    byte
 	Z    int32
-	Type varint
+	Type VarInt
 	Data byte
 }
 
@@ -463,11 +463,11 @@ type BlockAction struct {
 	Y            int16
 	Z            int32
 	Byte1, byte2 byte
-	BlockID      varint
+	BlockID      VarInt
 }
 
 type BlockBreakAnimation struct {
-	EntityID     varint
+	EntityID     VarInt
 	X            int32
 	Y            int32
 	Z            int32
@@ -543,7 +543,7 @@ type GameState struct {
 }
 
 type SpawnGlobalEntity struct {
-	EntityID varint
+	EntityID VarInt
 	Type     int8
 	X        int32
 	Y        int32
@@ -597,7 +597,7 @@ type UpdateSign struct {
 }
 
 type Maps struct {
-	ItemData varint
+	ItemData VarInt
 	Data     Buffer `ltype:"int16"`
 }
 
@@ -616,12 +616,12 @@ type SignEditorOpen struct {
 }
 
 type Statistics struct {
-	Statistics []Statistic `ltype:"varint"`
+	Statistics []Statistic `ltype:"VarInt"`
 }
 
 type Statistic struct {
 	Name   string
-	Amount varint
+	Amount VarInt
 }
 
 type PlayerListItem struct {
@@ -637,7 +637,7 @@ type PlayerAbilities struct {
 }
 
 type TabComplete struct {
-	Completions []string `ltype:"varint"`
+	Completions []string `ltype:"VarInt"`
 }
 
 type ScoreboardObjective struct {
@@ -683,8 +683,8 @@ type LoginDisconnect struct {
 
 type EncryptionKeyRequest struct {
 	ServerID    string
-	PublicKey   Buffer `ltype:"varint"`
-	VerifyToken Buffer `ltype:"varint"`
+	PublicKey   Buffer `ltype:"VarInt"`
+	VerifyToken Buffer `ltype:"VarInt"`
 }
 
 type LoginSuccess struct {
@@ -697,6 +697,6 @@ type LoginStart struct {
 }
 
 type EncryptionKeyResponse struct {
-	SharedSecret Buffer `ltype:"varint"`
-	VerifyToken  Buffer `ltype:"varint"`
+	SharedSecret Buffer `ltype:"VarInt"`
+	VerifyToken  Buffer `ltype:"VarInt"`
 }
