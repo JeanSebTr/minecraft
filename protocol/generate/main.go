@@ -37,7 +37,7 @@ func main() {
 	})
 
 	// will store every generated methods
-	declarations := make([]ast.Decl, 0)
+	var declarations []ast.Decl
 
 	// imports
 	declarations = append(declarations, &ast.GenDecl{
@@ -179,23 +179,45 @@ func createSimpleStatement(prev []ast.Stmt, expr ast.Expr, sp spec, dir tMode, t
 		st := sp.parse(expr, dir)
 		if st != nil {
 			return append(prev, st)
-		} else {
-			fmt.Fprintf(os.Stderr, "spec = %T %v\n", sp, sp)
 		}
+		fmt.Fprintf(os.Stderr, "spec = %T %v\n", sp, sp)
+	} else {
+		prev = markTODO(prev, expr)
 	}
 	return prev
 }
 
 func createArrayStatement(prev []ast.Stmt, expr ast.Expr, sp spec, dir tMode, tag reflect.StructTag) []ast.Stmt {
 	tLenName := tag.Get("ltype")
-	_, ok := types[tLenName]
+	lenType, ok := types[tLenName]
+	prev = markTODO(prev, expr)
 	if !ok {
 		if tLenName == "nil" {
 			return prev
 		}
 		panic(fmt.Errorf("Unknown ltype:%s of %v", tLenName, expr))
 	}
+	if dir == WRITE {
+		lenCall := cast(ident_len, expr)
+		valExpr := cast(ast.NewIdent(tLenName), lenCall)
+		fmt.Fprintf(os.Stderr, "%v %v\n", lenType, tLenName)
+		stmt := lenType.parse(valExpr, dir)
+		fmt.Fprintf(os.Stderr, "%v %v\n", prev, stmt)
+		prev = append(prev, stmt)
+	}
+
 	return prev
+}
+
+var todo = ast.NewIdent("TODO")
+
+func markTODO(prev []ast.Stmt, expr ast.Expr) []ast.Stmt {
+	return append(prev, &ast.ExprStmt{
+		X: &ast.CallExpr{
+			Fun:  todo,
+			Args: []ast.Expr{expr},
+		},
+	})
 }
 
 func createFieldList(names ...string) *ast.FieldList {

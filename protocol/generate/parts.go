@@ -18,6 +18,7 @@ var (
 	ident_buf   = ast.NewIdent("buf")
 	ident_nil   = ast.NewIdent("nil")
 	ident_pkt   = ast.NewIdent("pkt")
+	ident_len   = ast.NewIdent("len")
 	ident_err   = ast.NewIdent("err")
 	ident_error = ast.NewIdent("error")
 

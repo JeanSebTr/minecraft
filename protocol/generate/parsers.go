@@ -219,12 +219,11 @@ func createBufferInit(length int, dir tMode) ast.Stmt {
 }
 
 func cast(typeIdent, varIdent ast.Expr, shouldCast ...bool) ast.Expr {
-	if len(shouldCast) > 0 && shouldCast[0] {
+	if len(shouldCast) == 0 || shouldCast[0] {
 		return &ast.CallExpr{
 			Fun:  typeIdent,
 			Args: []ast.Expr{varIdent},
 		}
-	} else {
-		return varIdent
 	}
+	return varIdent
 }
